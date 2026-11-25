@@ -15,6 +15,10 @@ RUN sed -i -e 's/^mirrorlist/#mirrorlist/g' -e 's/^#baseurl=http:\/\/mirror.cent
 
 RUN yum -y install epel-release
 
+# The 2020 CA bundle in centos:7.9.2009 cannot verify developer.arm.com's current
+# GlobalSign E46 chain; take the final CentOS 7 ca-certificates from the vault.
+RUN yum -y update ca-certificates
+
 # Install requirements
 RUN yum install -y \
  apr-devel \

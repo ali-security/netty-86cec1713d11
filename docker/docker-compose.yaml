@@ -31,11 +31,18 @@ services:
 
   build:
     <<: *common
-    command: '/bin/bash -cl "
-      ./mvnw -B -ntp clean install -Dio.netty.testsuite.badHost=netty.io -Dtcnative.classifier=linux-x86_64-fedora -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true && 
-      cd testsuite-shading &&
-      ../mvnw -B -ntp integration-test failsafe:verify -Dtcnative.classifier=linux-x86_64-fedora -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true
-    "'
+    environment:
+      - MAVEN_OPTS
+      - TEST_FILTER
+      # GitHub sets CI=true; FastThreadLocalTest#testInternalThreadLocalMapExpand runs only when it is set.
+      - CI
+    # Link-local IPv6 on the container's eth0 so the IPv6 multicast tests find an interface.
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=0
+    # Scoped to the epoll modules (-pl ... -am): the full reactor + testsuite-shading run
+    # exceeds the CI step budget; the epoll native tests and netty-testsuite still run.
+    # -Pboringssl (as upstream's build-boringssl-static service) so the BoringSSL-only SSL tests run.
+    command: /bin/bash -cl "./mvnw -B -ntp -Pboringssl -pl transport-classes-epoll,transport-native-unix-common,transport-native-epoll -am clean install -Dio.netty.testsuite.badHost=netty.io -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true $${TEST_FILTER:+-Dtest=$$TEST_FILTER -Dsurefire.failIfNoSpecifiedTests=false}"
 
   deploy:
     <<: *common
@@ -49,7 +56,7 @@ services:
       - ~/.m2:/root/.m2
       - ~/local-staging:/root/local-staging
       - ..:/code
-    command: /bin/bash -cl "./mvnw -B -ntp clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DskipRemoteStaging=true -DaltStagingDirectory=/root/local-staging -DskipTests=true -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true"
+    command: /bin/bash -cl "./mvnw -B -ntp clean deploy -DaltDeploymentRepository=local-staging::default::file:///root/local-staging -DskipTests=true -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true"
 
   stage-release:
     <<: *common

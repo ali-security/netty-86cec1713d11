@@ -27,6 +27,7 @@ import io.netty.test.udt.util.EchoByteHandler;
 import io.netty.test.udt.util.UnitHelp;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -55,6 +56,8 @@ public class NioUdtByteRendezvousChannelTest extends AbstractUdtTest {
      */
     @Test
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
+    @Disabled("Flaky: the loop exits once EITHER peer reaches transferLimit but then asserts BOTH did, "
+            + "so it races; upstream already disables the twin NioUdtMessageRendezvousChannelTest.basicEcho")
     public void basicEcho() throws Exception {
 
         final int messageSize = 64 * 1024;
